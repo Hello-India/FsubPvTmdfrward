@@ -7,6 +7,7 @@ from platform import python_version
 from translation import Translation
 from pyrogram import Client, filters, enums, __version__ as pyrogram_version
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaDocument
+from pyrogram.errors import UserNotParticipant
 
 main_buttons = [[
         InlineKeyboardButton('❣️ ᴅᴇᴠᴇʟᴏᴘᴇʀ ❣️', url='https://t.me/Anmol0700')
@@ -19,18 +20,51 @@ main_buttons = [[
         ],[
         InlineKeyboardButton('⚙️ sᴇᴛᴛɪɴɢs ⚙️', callback_data='settings#main')
         ]]
+
 #===================Start Function===================#
 
 @Client.on_message(filters.private & filters.command(['start']))
 async def start(client, message):
     user = message.from_user
+    chat_id = message.chat.id
+    
+    # Check if user is a member of the AUTH_CHANNEL
+    try:
+        channel = await client.get_chat_member(Config.AUTH_CHANNEL, user.id)
+        if channel.status not in ["member", "administrator", "creator"]:
+            # Generate invite link for the channel
+            invite_link = await client.export_chat_invite_link(Config.AUTH_CHANNEL)
+            # Prompt user to join the channel with a button containing the invite link
+            await client.send_message(
+                chat_id,
+                f"You must join our channel to use this bot.\nClick the button below to join:",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("Join Channel", url=invite_link)]]
+                )
+            )
+            return
+    except UserNotParticipant:
+        # Generate invite link for the channel
+        invite_link = await client.export_chat_invite_link(Config.AUTH_CHANNEL)
+        # Prompt user to join the channel with a button containing the invite link
+        await client.send_message(
+            chat_id,
+            f"You must join our channel to use this bot.\nClick the button below to join:",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Join Channel", url=invite_link)]]
+            )
+        )
+        return
+    
+    # If user is a member of the channel, proceed with normal start function
     if not await db.is_user_exist(user.id):
-      await db.add_user(user.id, user.first_name)
+        await db.add_user(user.id, user.first_name)
     reply_markup = InlineKeyboardMarkup(main_buttons)
     await client.send_message(
-        chat_id=message.chat.id,
-        reply_markup=InlineKeyboardMarkup(main_buttons),
-        text=Translation.START_TXT.format(message.from_user.first_name))
+        chat_id=chat_id,
+        reply_markup=reply_markup,
+        text=Translation.START_TXT.format(user.first_name)
+    )
 
 #==================Restart Function==================#
 
@@ -42,7 +76,7 @@ async def restart(client, message):
     await asyncio.sleep(5)
     await msg.edit("<i>Server restarted successfully ✅</i>")
     os.execl(sys.executable, sys.executable, *sys.argv)
-    
+
 #==================Callback Functions==================#
 
 @Client.on_callback_query(filters.regex(r'^help'))
@@ -95,3 +129,13 @@ async def status(bot, query):
         parse_mode=enums.ParseMode.HTML,
         disable_web_page_preview=True,
     )
+
+# Run the client
+if __name__ == "__main__":
+    app = Client(
+        "my_bot",
+        api_id=Config.API_ID,
+        api_hash=Config.API_HASH,
+        bot_token=Config.BOT_TOKEN,
+    )
+    app.run()

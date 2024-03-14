@@ -8,6 +8,7 @@ class Config:
     DATABASE_URI = environ.get("DATABASE", "mongodb+srv://anmol:anmol@cluster0.sikg9g9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
     DATABASE_NAME = environ.get("DATABASE_NAME", "forward-bot")
     BOT_OWNER_ID = [int(id) for id in environ.get("BOT_OWNER_ID", '1663603208').split()]
+    AUTH_CHANNEL = int(environ.get("AUTH_CHANNEL", '-1001912762300'))  # Replace '123456789' with your actual channel ID
 
 class temp(object): 
     lock = {}
